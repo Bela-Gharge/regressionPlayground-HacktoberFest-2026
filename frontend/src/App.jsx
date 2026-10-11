@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, FlaskConical, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { AlertCircle, FlaskConical, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import DatasetUploader from './components/DatasetUploader.jsx';
 import Explanation from './components/Explanation.jsx';
 import MetricsPanel from './components/MetricsPanel.jsx';
@@ -19,20 +19,26 @@ const DEFAULT_DATA = [
 ];
 
 export default function App() {
-  const [data, setData] = useState(DEFAULT_DATA);
-  const [datasetName, setDatasetName] = useState('Study hours · default');
+ const [data, setData] = useState([]);
+const [datasetName, setDatasetName] = useState('');
   const [model, setModel] = useState(null);
   const [threshold, setThreshold] = useState(40);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pointX, setPointX] = useState('');
   const [pointY, setPointY] = useState('');
+useEffect(() => {
+  const controller = new AbortController();
 
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError('');
-    fitRegression(data, controller.signal)
+  if (data.length === 0) {
+    setModel(null);
+    setLoading(false);
+    return () => controller.abort();
+  }
+
+  setLoading(true);
+  setError('');
+  fitRegression(data, controller.signal)
       .then((result) => {
         setModel(result);
         const predictedValues = result.predictions.map((point) => point.predicted);
@@ -77,7 +83,11 @@ export default function App() {
     setDatasetName('Study hours · default');
     setError('');
   }
-
+function loadSampleDataset() {
+  setData(DEFAULT_DATA);
+  setDatasetName('Study hours · default');
+  setError('');
+}
   function addPoint(event) {
     event.preventDefault();
     const x = Number(pointX);
@@ -135,7 +145,8 @@ export default function App() {
 
         {error && <div className="error-banner" role="alert"><AlertCircle size={17} /> <span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
 
-        <div className="workspace-grid">
+      {data.length > 0 ? (
+  <div className="workspace-grid">
           <div className="visual-column">
             <RegressionChart data={data} model={model ?? { predictions: [], intercept: 0, slope: 0 }} threshold={threshold} />
             {loading && <div className="loading-line" role="status"><span className="loading-spinner" /> Updating your model…</div>}
@@ -167,8 +178,43 @@ export default function App() {
               ))}
             </div>
           </aside>
-        </div>
+                </div>
+      ) : (
+        <section className="empty-state" aria-labelledby="empty-state-title">
+          <div className="empty-state-icon">
+            <Upload size={28} aria-hidden="true" />
+          </div>
 
+          <h2 id="empty-state-title">No dataset loaded</h2>
+
+          <p>
+            Upload a CSV dataset or load the sample dataset to start exploring
+            linear regression.
+          </p>
+
+          <div className="empty-state-actions">
+            <button
+              className="button button-primary"
+              type="button"
+              onClick={() => document.querySelector('input[type="file"]')?.click()}
+            >
+              <Upload size={16} aria-hidden="true" />
+              Upload CSV
+            </button>
+
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={loadSampleDataset}
+            >
+              Load sample dataset
+            </button>
+          </div>
+        </section>
+      )}
+
+      {model && <MetricsPanel model={model} sampleCount={data.length} passCount={decisions.pass} failCount={decisions.fail} />}
+        <Explanation />
         {model && <MetricsPanel model={model} sampleCount={data.length} passCount={decisions.pass} failCount={decisions.fail} />}
         <Explanation data={data} model={model}/>
       </main>

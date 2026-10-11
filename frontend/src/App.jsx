@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+
+import { AlertCircle, FlaskConical, Moon, Plus, Sparkles, Sun, Trash2 } from 'lucide-react';
+
 import { AlertCircle, FlaskConical, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
+
 import DatasetUploader from './components/DatasetUploader.jsx';
 import Explanation from './components/Explanation.jsx';
 import MetricsPanel from './components/MetricsPanel.jsx';
@@ -30,6 +34,26 @@ const [datasetName, setDatasetName] = useState('');
 useEffect(() => {
   const controller = new AbortController();
 
+  // Theme state with localStorage persistence
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'light';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    fitRegression(data, controller.signal)
+
   if (data.length === 0) {
     setModel(null);
     setLoading(false);
@@ -39,6 +63,7 @@ useEffect(() => {
   setLoading(true);
   setError('');
   fitRegression(data, controller.signal)
+
       .then((result) => {
         setModel(result);
         const predictedValues = result.predictions.map((point) => point.predicted);
@@ -121,7 +146,18 @@ function loadSampleDataset() {
           <span className="brand-mark"><FlaskConical size={19} strokeWidth={2.1} /></span>
           <span>Regression <b>Playground</b></span>
         </a>
-        <div className="topbar-right"><span className="open-source-tag"><Sparkles size={13} /> OPEN LEARNING LAB</span></div>
+        <div className="topbar-right">
+          <span className="open-source-tag"><Sparkles size={13} /> OPEN LEARNING LAB</span>
+          <button 
+            className="theme-toggle-btn button" 
+            onClick={toggleTheme}
+            aria-label="Toggle light and dark theme"
+            title="Toggle theme"
+          >
+            {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+            <span>{theme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>
+          </button>
+        </div>
       </header>
 
       <main id="top" className="main-content">

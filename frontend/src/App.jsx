@@ -103,10 +103,33 @@ useEffect(() => {
     setError('');
   }
 
-  function resetDataset() {
+ 
+function resetDataset() {
+    const isDefaultDataset =
+        datasetName === 'Study hours · default' &&
+        data.length === DEFAULT_DATA.length &&
+        data.every(
+            (point, index) =>
+                point.x === DEFAULT_DATA[index].x &&
+                point.y === DEFAULT_DATA[index].y
+        );
+
+    if (!isDefaultDataset) {
+        const confirmed = window.confirm(
+            'Are you sure you want to reset the dataset? Your uploaded or edited data will be lost.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+    }
+
     setData(DEFAULT_DATA);
     setDatasetName('Study hours · default');
     setError('');
+}
+
+
   }
 function loadSampleDataset() {
   setData(DEFAULT_DATA);

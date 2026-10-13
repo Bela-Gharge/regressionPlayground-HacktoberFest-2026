@@ -171,14 +171,16 @@ export default function RegressionChart({ data, model, threshold }) {
               domain={showResiduals ? residualDomain : ["auto", "auto"]}
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "#78877b", fontSize: 12 }}
-              width={55}
+              tick={{ fill: "#78877b", fontSize: 11 }}
+              tickFormatter={(value) => Number(value).toFixed(1)}
+              width={75}
               label={{
                 value: showResiduals ? "Residual" : "Exam marks",
                 angle: -90,
                 position: "insideLeft",
+                offset: 10,
                 fill: "#66756a",
-                fontSize: 12,
+                fontSize: 11,
               }}
             />
 

@@ -6,9 +6,13 @@ A small, hands-on machine-learning lab for seeing how simple linear regression f
 
 ## Preview
 
-<!-- Replace this placeholder with a screenshot or short recording of the running app. -->
+### Regression Visualization
 
-`Screenshot placeholder: add an overview image here after capturing the running application.`
+![Regression Visualization](screenshots/regression-visualization.png)
+
+### Regression Metrics and Results
+
+![Regression Metrics and Results](screenshots/regression-metrics.png)
 
 ## Features
 

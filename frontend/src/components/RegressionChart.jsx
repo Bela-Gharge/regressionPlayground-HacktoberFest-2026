@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -75,6 +75,29 @@ function ResidualTooltip({ active, payload }) {
 
 export default function RegressionChart({ data, model, threshold }) {
   const [showResiduals, setShowResiduals] = useState(false);
+  // Track theme changes from document root
+  const [isDark, setIsDark] = useState(
+    () => document.documentElement.getAttribute("data-theme") === "dark",
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  // Dynamic theme-aware colors for Recharts SVG elements
+  const gridStroke = isDark ? "#334155" : "#e4ebe5";
+  const axisColor = isDark ? "#94a3b8" : "#78877b";
+  const refLineColor = isDark ? "#f87171" : "#dd765b";
+  const fitLineColor = isDark ? "#4ade80" : "#3e765c";
+  const passColor = isDark ? "#4ade80" : "#2f8a68";
+  const failColor = isDark ? "#f87171" : "#dd765b";
 
   const chartData = useMemo(
     () =>
@@ -143,24 +166,24 @@ export default function RegressionChart({ data, model, threshold }) {
             margin={{ top: 14, right: 20, bottom: 20, left: 8 }}
           >
             <CartesianGrid
-              stroke="#e4ebe5"
+              stroke={gridStroke}
               strokeDasharray="3 5"
               vertical={false}
             />
-
             <XAxis
               type="number"
               dataKey="x"
               name="Input"
               domain={["dataMin - 0.5", "dataMax + 0.5"]}
               tickLine={false}
-              axisLine={{ stroke: "#cbd6cc" }}
-              tick={{ fill: "#78877b", fontSize: 12 }}
+              axisLine={{ stroke: axisColor }}
+              tick={{ fill: axisColor, fontSize: 12 }}
+              tickFormatter={(value) => Number(value).toFixed(1)}
               label={{
                 value: showResiduals ? "Input (x)" : "Study hours",
                 position: "insideBottom",
                 offset: -8,
-                fill: "#66756a",
+                fill: axisColor,
                 fontSize: 12,
               }}
             />
@@ -178,8 +201,8 @@ export default function RegressionChart({ data, model, threshold }) {
                 value: showResiduals ? "Residual" : "Exam marks",
                 angle: -90,
                 position: "insideLeft",
-                offset: 10,
-                fill: "#66756a",
+                offset: 5,
+                fill: axisColor,
                 fontSize: 11,
               }}
             />

@@ -161,7 +161,7 @@ function loadSampleDataset() {
     setDatasetName('Custom dataset');
     setError('');
   }
-
+  const observationLabel = `${data.length} ${data.length === 1 ? 'observation' : 'observations'}`;
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -198,7 +198,7 @@ function loadSampleDataset() {
         </section>
 
         <section className="dataset-bar" aria-label="Dataset controls">
-          <div className="dataset-heading"><span className="eyebrow">YOUR DATA</span><strong>{data.length} observations</strong></div>
+          <div className="dataset-heading"><span className="eyebrow">YOUR DATA</span><strong>{observationLabel}</strong></div>
           <DatasetUploader onUpload={handleUpload} onReset={resetDataset} datasetName={datasetName} />
         </section>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CartesianGrid,
+  Cell,
   ComposedChart,
   Legend,
   Line,
@@ -16,12 +17,21 @@ function ChartTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const point = payload.find((entry) => entry.payload?.actual !== undefined)?.payload;
   if (!point) return null;
+
   return (
     <div className="chart-tooltip">
       <strong>{point.x.toFixed(1)} study hours</strong>
       <span>Actual mark <b>{point.actual.toFixed(1)}</b></span>
       <span>Predicted <b>{point.predicted.toFixed(1)}</b></span>
+      {point.residual !== undefined && (
+        <span>Residual <b>{point.residual.toFixed(2)}</b></span>
+      )}
       <span>Decision <b className={point.decision === 'PASS' ? 'tooltip-pass' : 'tooltip-fail'}>{point.decision}</b></span>
+      {point.is_outlier && (
+        <span style={{ color: '#ef4444', fontWeight: 'bold', marginTop: '4px' }}>
+          ⚠️ Outlier (|residual| &gt; 2σ)
+        </span>
+      )}
     </div>
   );
 }
@@ -45,6 +55,7 @@ export default function RegressionChart({ data, model, threshold }) {
   const fitLineColor = isDark ? '#4ade80' : '#3e765c';
   const passColor = isDark ? '#4ade80' : '#2f8a68';
   const failColor = isDark ? '#f87171' : '#dd765b';
+  const outlierColor = isDark ? '#f87171' : '#dc2626';
 
   const chartData = useMemo(
     () => model.predictions.map((row) => ({
@@ -53,7 +64,7 @@ export default function RegressionChart({ data, model, threshold }) {
     })),
     [model.predictions, threshold],
   );
-  
+
   const lineData = useMemo(() => {
     const xValues = data.map((point) => point.x);
     const low = Math.min(...xValues);
@@ -64,13 +75,16 @@ export default function RegressionChart({ data, model, threshold }) {
     ];
   }, [data, model.intercept, model.slope]);
 
+  const passPoints = useMemo(() => chartData.filter((point) => point.decision === 'PASS'), [chartData]);
+  const failPoints = useMemo(() => chartData.filter((point) => point.decision === 'FAIL'), [chartData]);
+
   return (
     <section className="chart-panel" aria-labelledby="chart-heading">
       <div className="chart-heading-row">
         <div>
           <span className="eyebrow">THE BIG PICTURE</span>
           <h2 id="chart-heading">Study time vs. exam marks</h2>
-          <p>Each dot is a student. Color reflects the prediction, not the actual mark.</p>
+          <p>Each dot is a student. Color reflects the prediction, with outliers highlighted in red.</p>
         </div>
         <span className="chart-sample-count">{data.length} observations</span>
       </div>
@@ -112,8 +126,28 @@ export default function RegressionChart({ data, model, threshold }) {
               activeDot={false}
               legendType="line"
             />
-            <Scatter data={chartData.filter((point) => point.decision === 'PASS')} dataKey="actual" name="Predicted PASS" fill={passColor} legendType="circle" />
-            <Scatter data={chartData.filter((point) => point.decision === 'FAIL')} dataKey="actual" name="Predicted FAIL" fill={failColor} legendType="circle" />
+            <Scatter data={passPoints} dataKey="actual" name="Predicted PASS" fill={passColor} legendType="circle">
+              {passPoints.map((entry, index) => (
+                <Cell
+                  key={`pass-cell-${index}`}
+                  fill={entry.is_outlier ? outlierColor : passColor}
+                  stroke={entry.is_outlier ? '#991b1b' : 'none'}
+                  strokeWidth={entry.is_outlier ? 2 : 0}
+                  r={entry.is_outlier ? 7 : 4}
+                />
+              ))}
+            </Scatter>
+            <Scatter data={failPoints} dataKey="actual" name="Predicted FAIL" fill={failColor} legendType="circle">
+              {failPoints.map((entry, index) => (
+                <Cell
+                  key={`fail-cell-${index}`}
+                  fill={entry.is_outlier ? outlierColor : failColor}
+                  stroke={entry.is_outlier ? '#991b1b' : 'none'}
+                  strokeWidth={entry.is_outlier ? 2 : 0}
+                  r={entry.is_outlier ? 7 : 4}
+                />
+              ))}
+            </Scatter>
           </ComposedChart>
         </ResponsiveContainer>
       </div>

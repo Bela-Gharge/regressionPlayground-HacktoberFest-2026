@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-
-import { AlertCircle, FlaskConical, Moon, Plus, Sparkles, Sun, Trash2 } from 'lucide-react';
-
-import { AlertCircle, FlaskConical, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
+import { AlertCircle, FlaskConical, Moon, Plus, Sparkles, Sun, Trash2, Upload } from 'lucide-react';
 
 import DatasetUploader from './components/DatasetUploader.jsx';
 import Explanation from './components/Explanation.jsx';
@@ -23,16 +20,14 @@ const DEFAULT_DATA = [
 ];
 
 export default function App() {
- const [data, setData] = useState([]);
-const [datasetName, setDatasetName] = useState('');
+  const [data, setData] = useState(DEFAULT_DATA);
+  const [datasetName, setDatasetName] = useState('Study hours · default');
   const [model, setModel] = useState(null);
   const [threshold, setThreshold] = useState(40);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pointX, setPointX] = useState('');
   const [pointY, setPointY] = useState('');
-useEffect(() => {
-  const controller = new AbortController();
 
   // Theme state with localStorage persistence
   const [theme, setTheme] = useState(() => {
@@ -50,20 +45,17 @@ useEffect(() => {
 
   useEffect(() => {
     const controller = new AbortController();
+
+    if (data.length === 0) {
+      setModel(null);
+      setLoading(false);
+      return () => controller.abort();
+    }
+
     setLoading(true);
     setError('');
+
     fitRegression(data, controller.signal)
-
-  if (data.length === 0) {
-    setModel(null);
-    setLoading(false);
-    return () => controller.abort();
-  }
-
-  setLoading(true);
-  setError('');
-  fitRegression(data, controller.signal)
-
       .then((result) => {
         setModel(result);
         const predictedValues = result.predictions.map((point) => point.predicted);
@@ -77,6 +69,7 @@ useEffect(() => {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
+
     return () => controller.abort();
   }, [data]);
 
@@ -103,39 +96,37 @@ useEffect(() => {
     setError('');
   }
 
- 
-function resetDataset() {
+  function resetDataset() {
     const isDefaultDataset =
-        datasetName === 'Study hours · default' &&
-        data.length === DEFAULT_DATA.length &&
-        data.every(
-            (point, index) =>
-                point.x === DEFAULT_DATA[index].x &&
-                point.y === DEFAULT_DATA[index].y
-        );
+      datasetName === 'Study hours · default' &&
+      data.length === DEFAULT_DATA.length &&
+      data.every(
+        (point, index) =>
+          point.x === DEFAULT_DATA[index].x &&
+          point.y === DEFAULT_DATA[index].y
+      );
 
     if (!isDefaultDataset) {
-        const confirmed = window.confirm(
-            'Are you sure you want to reset the dataset? Your uploaded or edited data will be lost.'
-        );
+      const confirmed = window.confirm(
+        'Are you sure you want to reset the dataset? Your uploaded or edited data will be lost.'
+      );
 
-        if (!confirmed) {
-            return;
-        }
+      if (!confirmed) {
+        return;
+      }
     }
 
     setData(DEFAULT_DATA);
     setDatasetName('Study hours · default');
     setError('');
-}
-
-
   }
-function loadSampleDataset() {
-  setData(DEFAULT_DATA);
-  setDatasetName('Study hours · default');
-  setError('');
-}
+
+  function loadSampleDataset() {
+    setData(DEFAULT_DATA);
+    setDatasetName('Study hours · default');
+    setError('');
+  }
+
   function addPoint(event) {
     event.preventDefault();
     const x = Number(pointX);
@@ -161,7 +152,9 @@ function loadSampleDataset() {
     setDatasetName('Custom dataset');
     setError('');
   }
+
   const observationLabel = `${data.length} ${data.length === 1 ? 'observation' : 'observations'}`;
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -171,8 +164,8 @@ function loadSampleDataset() {
         </a>
         <div className="topbar-right">
           <span className="open-source-tag"><Sparkles size={13} /> OPEN LEARNING LAB</span>
-          <button 
-            className="theme-toggle-btn button" 
+          <button
+            className="theme-toggle-btn button"
             onClick={toggleTheme}
             aria-label="Toggle light and dark theme"
             title="Toggle theme"
@@ -204,80 +197,93 @@ function loadSampleDataset() {
 
         {error && <div className="error-banner" role="alert"><AlertCircle size={17} /> <span>{error}</span><button type="button" onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
 
-      {data.length > 0 ? (
-  <div className="workspace-grid">
-          <div className="visual-column">
-            <RegressionChart data={data} model={model ?? { predictions: [], intercept: 0, slope: 0 }} threshold={threshold} />
-            {loading && <div className="loading-line" role="status"><span className="loading-spinner" /> Updating your model…</div>}
-            {model && <ThresholdControl
-              threshold={threshold}
-              setThreshold={setThreshold}
-              min={predictionRange.min}
-              max={predictionRange.max}
-              passCount={decisions.pass}
-              failCount={decisions.fail}
-            />}
-          </div>
-          <aside className="data-side-panel">
-            <div className="points-heading"><div><span className="eyebrow">OBSERVATIONS</span><h2>Shape the data</h2></div><span className="point-count">{data.length}</span></div>
-            <form className="add-point-form" onSubmit={addPoint}>
-              <label><span>Hours</span><input aria-label="Study hours" inputMode="decimal" placeholder="e.g. 2.5" value={pointX} onChange={(event) => setPointX(event.target.value)} /></label>
-              <label><span>Marks</span><input aria-label="Exam marks" inputMode="decimal" placeholder="e.g. 58" value={pointY} onChange={(event) => setPointY(event.target.value)} /></label>
-              <button className="icon-button add-button" type="submit" aria-label="Add observation" title="Add observation"><Plus size={18} /></button>
-            </form>
-            <p className="point-help">Add an observation to see how one more student shifts the fit.</p>
-            <div className="points-list" aria-label="Dataset observations">
-              {[...data].map((point, index) => (
-                <div className="point-row" key={`${point.x}-${index}`}>
-                  <span className="point-index">{String(index + 1).padStart(2, '0')}</span>
-                  <span>{point.x.toFixed(1)} <small>hrs</small></span>
-                  <span className="point-mark">{point.y.toFixed(1)} <small>marks</small></span>
-                  <button className="icon-button remove-button" type="button" onClick={() => removePoint(index)} aria-label={`Remove observation ${index + 1}`} title="Remove observation"><Trash2 size={14} /></button>
-                </div>
-              ))}
+        {data.length > 0 ? (
+          <div className="workspace-grid">
+            <div className="visual-column">
+              <RegressionChart data={data} model={model ?? { predictions: [], intercept: 0, slope: 0 }} threshold={threshold} />
+              {loading && <div className="loading-line" role="status"><span className="loading-spinner" /> Updating your model…</div>}
+              {model && (
+                <ThresholdControl
+                  threshold={threshold}
+                  setThreshold={setThreshold}
+                  min={predictionRange.min}
+                  max={predictionRange.max}
+                  passCount={decisions.pass}
+                  failCount={decisions.fail}
+                />
+              )}
             </div>
-          </aside>
-                </div>
-      ) : (
-        <section className="empty-state" aria-labelledby="empty-state-title">
-          <div className="empty-state-icon">
-            <Upload size={28} aria-hidden="true" />
+            <aside className="data-side-panel">
+              <div className="points-heading">
+                <div><span className="eyebrow">OBSERVATIONS</span><h2>Shape the data</h2></div>
+                <span className="point-count">{data.length}</span>
+              </div>
+              <form className="add-point-form" onSubmit={addPoint}>
+                <label><span>Hours</span><input aria-label="Study hours" inputMode="decimal" placeholder="e.g. 2.5" value={pointX} onChange={(event) => setPointX(event.target.value)} /></label>
+                <label><span>Marks</span><input aria-label="Exam marks" inputMode="decimal" placeholder="e.g. 58" value={pointY} onChange={(event) => setPointY(event.target.value)} /></label>
+                <button className="icon-button add-button" type="submit" aria-label="Add observation" title="Add observation"><Plus size={18} /></button>
+              </form>
+              <p className="point-help">Add an observation to see how one more student shifts the fit.</p>
+              <div className="points-list" aria-label="Dataset observations">
+                {[...data].map((point, index) => (
+                  <div className="point-row" key={`${point.x}-${index}`}>
+                    <span className="point-index">{String(index + 1).padStart(2, '0')}</span>
+                    <span>{point.x.toFixed(1)} <small>hrs</small></span>
+                    <span className="point-mark">{point.y.toFixed(1)} <small>marks</small></span>
+                    <button className="icon-button remove-button" type="button" onClick={() => removePoint(index)} aria-label={`Remove observation ${index + 1}`} title="Remove observation"><Trash2 size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            </aside>
           </div>
+        ) : (
+          <section className="empty-state" aria-labelledby="empty-state-title">
+            <div className="empty-state-icon">
+              <Upload size={28} aria-hidden="true" />
+            </div>
 
-          <h2 id="empty-state-title">No dataset loaded</h2>
+            <h2 id="empty-state-title">No dataset loaded</h2>
 
-          <p>
-            Upload a CSV dataset or load the sample dataset to start exploring
-            linear regression.
-          </p>
+            <p>
+              Upload a CSV dataset or load the sample dataset to start exploring
+              linear regression.
+            </p>
 
-          <div className="empty-state-actions">
-            <button
-              className="button button-primary"
-              type="button"
-              onClick={() => document.querySelector('input[type="file"]')?.click()}
-            >
-              <Upload size={16} aria-hidden="true" />
-              Upload CSV
-            </button>
+            <div className="empty-state-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={() => document.querySelector('input[type="file"]')?.click()}
+              >
+                <Upload size={16} aria-hidden="true" />
+                Upload CSV
+              </button>
 
-            <button
-              className="button button-secondary"
-              type="button"
-              onClick={loadSampleDataset}
-            >
-              Load sample dataset
-            </button>
-          </div>
-        </section>
-      )}
+              <button
+                className="button button-secondary"
+                type="button"
+                onClick={loadSampleDataset}
+              >
+                Load sample dataset
+              </button>
+            </div>
+          </section>
+        )}
 
-      {model && <MetricsPanel model={model} sampleCount={data.length} passCount={decisions.pass} failCount={decisions.fail} />}
-        <Explanation />
-        {model && <MetricsPanel model={model} sampleCount={data.length} passCount={decisions.pass} failCount={decisions.fail} />}
-        <Explanation data={data} model={model}/>
+        {model && (
+          <MetricsPanel
+            model={model}
+            sampleCount={data.length}
+            passCount={decisions.pass}
+            failCount={decisions.fail}
+          />
+        )}
+        <Explanation data={data} model={model} />
       </main>
-      <footer className="footer"><span>Built for curious minds.</span><span>Regression Playground <i>·</i> learn by changing one thing at a time</span></footer>
+      <footer className="footer">
+        <span>Built for curious minds.</span>
+        <span>Regression Playground <i>·</i> learn by changing one thing at a time</span>
+      </footer>
     </div>
   );
 }

@@ -252,12 +252,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 
 }
 
-.chart-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
+
 
 .residual-toggle {
   padding: 0.55rem 0.85rem;
@@ -475,5 +470,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   .r2-definitions,
   .r2-values {
     grid-template-columns: 1fr;
+  }
+}
+
   }
 }

@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+
+import { useEffect, useMemo, useState } from 'react';
+
 import {
   AlertCircle,
   FlaskConical,
@@ -8,14 +10,14 @@ import {
   Sun,
   Trash2,
   Upload,
-} from "lucide-react";
+} from 'lucide-react';
 
-import DatasetUploader from "./components/DatasetUploader.jsx";
-import Explanation from "./components/Explanation.jsx";
-import MetricsPanel from "./components/MetricsPanel.jsx";
-import RegressionChart from "./components/RegressionChart.jsx";
-import ThresholdControl from "./components/ThresholdControl.jsx";
-import { fitRegression } from "./services/api.js";
+import DatasetUploader from './components/DatasetUploader.jsx';
+import Explanation from './components/Explanation.jsx';
+import MetricsPanel from './components/MetricsPanel.jsx';
+import RegressionChart from './components/RegressionChart.jsx';
+import ThresholdControl from './components/ThresholdControl.jsx';
+import { fitRegression } from './services/api.js';
 
 const DEFAULT_DATA = [
   { x: 0.5, y: 34 },
@@ -52,19 +54,20 @@ const DEFAULT_DATA = [
 
 export default function App() {
   const [data, setData] = useState([]);
-  const [datasetName, setDatasetName] = useState("");
+  const [datasetName, setDatasetName] = useState('');
   const [model, setModel] = useState(null);
   const [threshold, setThreshold] = useState(40);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [pointX, setPointX] = useState("");
-  const [pointY, setPointY] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [pointX, setPointX] = useState('');
+  const [pointY, setPointY] = useState('');
 
-  // Theme state must be declared at the top level of the component.
+  // Theme state
   const [theme, setTheme] = useState(
-    () => localStorage.getItem("theme") || "light",
+    () => localStorage.getItem('theme') || 'light'
   );
 
+  // Apply and persist the selected theme
   useEffect(() => {
     localStorage.setItem("theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
@@ -104,6 +107,57 @@ export default function App() {
       })
       .catch((requestError) => {
         if (requestError.name !== "AbortError") {
+  function toggleTheme() {
+    setTheme((previousTheme) =>
+      previousTheme === 'light' ? 'dark' : 'light'
+    );
+  }
+
+  // Fit the regression model whenever the dataset changes
+  useEffect(() => {
+    const controller = new AbortController();
+
+    if (data.length === 0) {
+      setModel(null);
+      setLoading(false);
+      return () => controller.abort();
+    }
+
+    // A regression line needs at least two distinct x values.
+    if (new Set(data.map((point) => point.x)).size < 2) {
+      setModel(null);
+      setLoading(false);
+      setError('A regression line needs at least two distinct x values.');
+      return () => controller.abort();
+    }
+
+    setLoading(true);
+    setError('');
+
+    fitRegression(data, controller.signal)
+      .then((result) => {
+        if (controller.signal.aborted) return;
+
+        setModel(result);
+
+        const predictedValues = result.predictions.map(
+          (point) => point.predicted
+        );
+
+        if (predictedValues.length > 0) {
+          const minimum = Math.min(...predictedValues);
+          const maximum = Math.max(...predictedValues);
+
+          setThreshold((current) =>
+            Math.min(maximum, Math.max(minimum, current))
+          );
+        }
+      })
+      .catch((requestError) => {
+        if (
+          requestError.name !== 'AbortError' &&
+          !controller.signal.aborted
+        ) {
           setError(requestError.message);
         }
       })
@@ -116,12 +170,15 @@ export default function App() {
     return () => controller.abort();
   }, [data]);
 
+  // Prediction range for the threshold control
   const predictionRange = useMemo(() => {
-    if (!model) {
+    if (!model || model.predictions.length === 0) {
       return { min: 0, max: 100 };
     }
 
-    const values = model.predictions.map((point) => point.predicted);
+    const values = model.predictions.map(
+      (point) => point.predicted
+    );
 
     const min = Math.min(...values);
     const max = Math.max(...values);
@@ -132,10 +189,12 @@ export default function App() {
     };
   }, [model]);
 
+  // Count predictions above and below the threshold
   const decisions = useMemo(() => {
     const pass =
-      model?.predictions.filter((point) => point.predicted >= threshold)
-        .length ?? 0;
+      model?.predictions.filter(
+        (point) => point.predicted >= threshold
+      ).length ?? 0;
 
     const total = model?.predictions.length ?? 0;
 
@@ -158,35 +217,34 @@ export default function App() {
 
   function resetDataset() {
     const isDefaultDataset =
-      datasetName === "Study hours · default" &&
+      datasetName === 'Study hours · default' &&
       data.length === DEFAULT_DATA.length &&
       data.every(
         (point, index) =>
           point.x === DEFAULT_DATA[index].x &&
-          point.y === DEFAULT_DATA[index].y,
+          point.y === DEFAULT_DATA[index].y
       );
 
     if (!isDefaultDataset) {
       const confirmed = window.confirm(
-        "Are you sure you want to reset the dataset? Your uploaded or edited data will be lost.",
+        'Are you sure you want to reset the dataset? Your uploaded or edited data will be lost.'
       );
 
-      if (!confirmed) {
-        return;
-      }
+      if (!confirmed) return;
     }
 
     setData(DEFAULT_DATA);
-    setDatasetName("Study hours · default");
-    setError("");
+    setDatasetName('Study hours · default');
+    setError('');
   }
 
   function loadSampleDataset() {
     setData(DEFAULT_DATA);
-    setDatasetName("Study hours · default");
-    setError("");
+    setDatasetName('Study hours · default');
+    setError('');
   }
 
+  // Add a new observation
   function addPoint(event) {
     event.preventDefault();
 
@@ -199,30 +257,47 @@ export default function App() {
       !Number.isFinite(x) ||
       !Number.isFinite(y)
     ) {
-      setError("Enter a finite number for both study hours and exam marks.");
+      setError(
+        'Enter a finite number for both study hours and exam marks.'
+      );
       return;
     }
 
-    setData((current) => [...current, { x, y }]);
-    setDatasetName("Custom dataset");
-    setPointX("");
-    setPointY("");
-    setError("");
+    const updatedData = [...data, { x, y }];
+
+    if (new Set(updatedData.map((point) => point.x)).size < 2) {
+      setError('A regression line needs at least two distinct x values.');
+      return;
+    }
+
+    setData(updatedData);
+    setDatasetName('Custom dataset');
+    setPointX('');
+    setPointY('');
+    setError('');
   }
 
+  // Remove an observation
   function removePoint(index) {
-    const remaining = data.filter((_, pointIndex) => pointIndex !== index);
+    const remaining = data.filter(
+      (_, pointIndex) => pointIndex !== index
+    );
 
-    if (new Set(remaining.map((point) => point.x)).size < 2) {
-      setError("A regression line needs at least two observations.");
+    if (
+      remaining.length > 0 &&
+      new Set(remaining.map((point) => point.x)).size < 2
+    ) {
+      setError('A regression line needs at least two distinct x values.');
       return;
     }
 
     setData(remaining);
-    setDatasetName("Custom dataset");
-    setError("");
+    setDatasetName(
+      remaining.length === 0 ? '' : 'Custom dataset'
+    );
+    setError('');
   }
-
+  const observationLabel = `${data.length} ${data.length === 1 ? 'observation' : 'observations'}`;
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -251,8 +326,14 @@ export default function App() {
             aria-label="Toggle light and dark theme"
             title="Toggle theme"
           >
-            {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
-            <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+            {theme === 'light' ? (
+              <Moon size={14} />
+            ) : (
+              <Sun size={14} />
+            )}
+            <span>
+              {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+            </span>
           </button>
         </div>
       </header>
@@ -267,21 +348,24 @@ export default function App() {
               <em>Make the call.</em>
             </h1>
             <p>
-              See how a simple model learns from data, then decide what its
-              predictions mean.
+              See how a simple model learns from data, then decide
+              what its predictions mean.
             </p>
           </div>
 
           <div className="model-equation" aria-live="polite">
             <span className="equation-label">YOUR MODEL</span>
+
             {model ? (
               <strong>
-                ŷ = {model.intercept.toFixed(1)} {model.slope < 0 ? "−" : "+"}{" "}
+                ŷ = {model.intercept.toFixed(1)}{' '}
+                {model.slope < 0 ? '−' : '+'}{' '}
                 {Math.abs(model.slope).toFixed(1)}x
               </strong>
             ) : (
               <strong>ŷ = —</strong>
             )}
+
             <span className="equation-caption">
               Best-fit line <span>·</span> least squares
             </span>
@@ -289,16 +373,8 @@ export default function App() {
         </section>
 
         <section className="dataset-bar" aria-label="Dataset controls">
-          <div className="dataset-heading">
-            <span className="eyebrow">YOUR DATA</span>
-            <strong>{data.length} observations</strong>
-          </div>
-
-          <DatasetUploader
-            onUpload={handleUpload}
-            onReset={resetDataset}
-            datasetName={datasetName}
-          />
+          <div className="dataset-heading"><span className="eyebrow">YOUR DATA</span><strong>{data.length} observations</strong></div>
+          <DatasetUploader onUpload={handleUpload} onReset={resetDataset} datasetName={datasetName} />
         </section>
 
         {error && (
@@ -307,7 +383,7 @@ export default function App() {
             <span>{error}</span>
             <button
               type="button"
-              onClick={() => setError("")}
+              onClick={() => setError('')}
               aria-label="Dismiss error"
             >
               ×
@@ -358,7 +434,10 @@ export default function App() {
                 <span className="point-count">{data.length}</span>
               </div>
 
-              <form className="add-point-form" onSubmit={addPoint}>
+              <form
+                className="add-point-form"
+                onSubmit={addPoint}
+              >
                 <label>
                   <span>Hours</span>
                   <input
@@ -366,7 +445,9 @@ export default function App() {
                     inputMode="decimal"
                     placeholder="e.g. 2.5"
                     value={pointX}
-                    onChange={(event) => setPointX(event.target.value)}
+                    onChange={(event) =>
+                      setPointX(event.target.value)
+                    }
                   />
                 </label>
 
@@ -377,7 +458,9 @@ export default function App() {
                     inputMode="decimal"
                     placeholder="e.g. 58"
                     value={pointY}
-                    onChange={(event) => setPointY(event.target.value)}
+                    onChange={(event) =>
+                      setPointY(event.target.value)
+                    }
                   />
                 </label>
 
@@ -392,14 +475,21 @@ export default function App() {
               </form>
 
               <p className="point-help">
-                Add an observation to see how one more student shifts the fit.
+                Add an observation to see how one more student shifts
+                the fit.
               </p>
 
-              <div className="points-list" aria-label="Dataset observations">
-                {[...data].map((point, index) => (
-                  <div className="point-row" key={`${point.x}-${index}`}>
+              <div
+                className="points-list"
+                aria-label="Dataset observations"
+              >
+                {data.map((point, index) => (
+                  <div
+                    className="point-row"
+                    key={`${point.x}-${index}`}
+                  >
                     <span className="point-index">
-                      {String(index + 1).padStart(2, "0")}
+                      {String(index + 1).padStart(2, '0')}
                     </span>
 
                     <span>
@@ -425,7 +515,10 @@ export default function App() {
             </aside>
           </div>
         ) : (
-          <section className="empty-state" aria-labelledby="empty-state-title">
+          <section
+            className="empty-state"
+            aria-labelledby="empty-state-title"
+          >
             <div className="empty-state-icon">
               <Upload size={28} aria-hidden="true" />
             </div>
@@ -433,8 +526,8 @@ export default function App() {
             <h2 id="empty-state-title">No dataset loaded</h2>
 
             <p>
-              Upload a CSV dataset or load the sample dataset to start exploring
-              linear regression.
+              Upload a CSV dataset or load the sample dataset to start
+              exploring linear regression.
             </p>
 
             <div className="empty-state-actions">
@@ -442,7 +535,9 @@ export default function App() {
                 className="button button-primary"
                 type="button"
                 onClick={() =>
-                  document.querySelector('input[type="file"]')?.click()
+                  document
+                    .querySelector('input[type="file"]')
+                    ?.click()
                 }
               >
                 <Upload size={16} aria-hidden="true" />
@@ -475,7 +570,8 @@ export default function App() {
       <footer className="footer">
         <span>Built for curious minds.</span>
         <span>
-          Regression Playground <i>·</i> learn by changing one thing at a time
+          Regression Playground <i>·</i> learn by changing one thing at a
+          time
         </span>
       </footer>
     </div>

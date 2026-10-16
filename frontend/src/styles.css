@@ -259,6 +259,41 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   }
 }
 
+
+
+.residual-toggle {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #cbd6cc;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.residual-toggle:hover {
+  background: #edf3ee;
+  border-color: #3e765c;
+}
+
+.residual-toggle:focus-visible {
+  outline: 2px solid #3e765c;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .chart-heading-row {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .chart-controls {
+    align-items: flex-start;
+  }
+}
 /* Empty state shown when no dataset is loaded */
 .empty-state {
   display: flex;
@@ -442,5 +477,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   .r2-definitions,
   .r2-values {
     grid-template-columns: 1fr;
+  }
+}
+
   }
 }

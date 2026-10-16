@@ -263,7 +263,7 @@ export default function App() {
     );
     setError('');
   }
-
+  const observationLabel = `${data.length} ${data.length === 1 ? 'observation' : 'observations'}`;
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -338,20 +338,9 @@ export default function App() {
           </div>
         </section>
 
-        <section
-          className="dataset-bar"
-          aria-label="Dataset controls"
-        >
-          <div className="dataset-heading">
-            <span className="eyebrow">YOUR DATA</span>
-            <strong>{data.length} observations</strong>
-          </div>
-
-          <DatasetUploader
-            onUpload={handleUpload}
-            onReset={resetDataset}
-            datasetName={datasetName}
-          />
+        <section className="dataset-bar" aria-label="Dataset controls">
+          <div className="dataset-heading"><span className="eyebrow">YOUR DATA</span><strong>{data.length} observations</strong></div>
+          <DatasetUploader onUpload={handleUpload} onReset={resetDataset} datasetName={datasetName} />
         </section>
 
         {error && (

@@ -69,10 +69,44 @@ export default function App() {
 
   // Apply and persist the selected theme
   useEffect(() => {
-    localStorage.setItem('theme', theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem("theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
+  const toggleTheme = () => {
+    setTheme((previousTheme) => (previousTheme === "light" ? "dark" : "light"));
+  };
+
+  // Fit the regression model whenever the dataset changes.
+  useEffect(() => {
+    if (data.length === 0) {
+      setModel(null);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    setLoading(true);
+    setError("");
+
+    fitRegression(data, controller.signal)
+      .then((result) => {
+        setModel(result);
+
+        const predictedValues = result.predictions.map(
+          (point) => point.predicted,
+        );
+
+        const minimum = Math.min(...predictedValues);
+        const maximum = Math.max(...predictedValues);
+
+        setThreshold((current) =>
+          Math.min(maximum, Math.max(minimum, current)),
+        );
+      })
+      .catch((requestError) => {
+        if (requestError.name !== "AbortError") {
   function toggleTheme() {
     setTheme((previousTheme) =>
       previousTheme === 'light' ? 'dark' : 'light'
@@ -178,7 +212,7 @@ export default function App() {
 
     setData(points);
     setDatasetName(name);
-    setError('');
+    setError("");
   }
 
   function resetDataset() {
